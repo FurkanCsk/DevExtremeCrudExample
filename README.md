@@ -7,7 +7,7 @@ Bu proje, ASP.NET Core MVC mimarisi ile geliştirilmiş bir Öğrenci ve Kurs y�
 - ASP.NET Core MVC
 - Web API
 - Dapper (Micro ORM)
-- DevExpress ASP.NET MVC UI Controls
+- DevExpress ASP.NET Core
 - SQL Server
 
 ## 📌 Proje Özellikleri
