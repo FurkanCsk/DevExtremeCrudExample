@@ -1,0 +1,137 @@
+@{
+    ViewData["Title"] = "Students";
+}
+
+<link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/24.2.3/css/dx.light.css" />
+<script src="https://cdn3.devexpress.com/jslib/24.2.3/js/jquery.min.js"></script>
+<script src="https://cdn3.devexpress.com/jslib/24.2.3/js/jszip.min.js"></script>
+<script src="https://cdn3.devexpress.com/jslib/24.2.3/js/dx.all.js"></script>
+
+<h2>Student List</h2>
+<div id="gridContainer"></div>
+
+<script>
+    $(function () {
+        const studentStore = DevExpress.data.AspNet.createStore({
+            key: "id",
+            loadUrl: "/api/student",
+            insertUrl: "/api/student",
+            updateUrl: "/api/student",
+            deleteUrl: "/api/student/{key}",
+            loadMode: "raw",
+            onBeforeSend: function (operation, ajaxSettings) {
+                if (operation !== "load") {
+                    if (operation === "update") {
+                        // DataGrid'den tüm satýr verisini al
+                        const dataGrid = $("#gridContainer").dxDataGrid("instance");
+                        const fullData = dataGrid.getDataSource().items().find(item => item.id === ajaxSettings.data.key);
+
+                        // Deðiþen alanlarý fullData ile merge et
+                        const changedData = JSON.parse(ajaxSettings.data.values);
+                        const mergedData = { ...fullData, ...changedData };
+
+                        ajaxSettings.data = JSON.stringify(mergedData);
+                    }
+                    else if(operation === "delete"){
+                        ajaxSettings.url = `/api/student/${ajaxSettings.data.key}`;
+                        ajaxSettings.data = undefined;
+                    }
+                    else { 
+                                ajaxSettings.data = JSON.stringify(ajaxSettings.data);
+                    }
+                    ajaxSettings.contentType = "application/json";
+                }
+            }
+        });
+
+        $("#gridContainer").dxDataGrid({
+            dataSource: studentStore,
+            remoteOperations: false,
+            keyExpr: "id",
+            columns: [
+                {
+                    dataField: "name",
+                    caption: "Name",
+                    validationRules: [{ type: "required" }]
+                },
+                {
+                    dataField: "email",
+                    caption: "Email",
+                    validationRules: [{ type: "required" }, { type: "email" }]
+                },
+                {
+                    dataField: "courseId",
+                    caption: "Course",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "id",
+                            loadUrl: "/api/course"
+                        }),
+                        valueExpr: "id",
+                        displayExpr: "title"
+                    },
+                    validationRules: [{ type: "required" }]
+                }
+
+            ],
+            editing: {
+                mode: "popup",
+                allowAdding: true,
+                allowUpdating: true,
+                allowDeleting: true,
+                popup: {
+                    title: "Student Info",
+                    showTitle: true,
+                    width: 400,
+                    height: 300
+                },
+                form: {
+                    items: [
+                        {
+                            dataField: "name",
+                            label: { text: "Name" }
+                        },
+                        {
+                            dataField: "email",
+                            label: { text: "Email" }
+                        },
+                        {
+                            dataField: "courseId",
+                            label: { text: "Course" }
+                        }
+                    ]
+                },
+                onSaving: function (e) {
+                    e.cancel = true; // Varsayýlan save iþlemini iptal et
+
+                    const dataGrid = e.component;
+                    const store = dataGrid.getDataSource().store();
+
+                    if (e.changes[0].type === "update") {
+                        // Tüm satýr verisini al (deðiþmeyen alanlar dahil)
+                        const fullData = e.changes[0].key !== undefined
+                            ? dataGrid.option("dataSource").find(record => record.id === e.changes[0].key)
+                            : null;
+
+                        // Deðiþen alanlarý merge et
+                        const mergedData = { ...fullData, ...e.changes[0].data };
+
+                        // Güncelleme isteðini manuel gönder
+                        store.update(e.changes[0].key, mergedData).then(() => {
+                            dataGrid.refresh();
+                        });
+                    }
+                }
+            },
+            searchPanel: {
+                visible: true,
+                width: 240,
+                placeholder: "Search..."
+            },
+            paging: {
+                pageSize: 10
+            },
+            showBorders: true
+        });
+    });
+</script>
